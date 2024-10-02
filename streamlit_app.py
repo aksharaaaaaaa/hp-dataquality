@@ -15,22 +15,14 @@ st.divider()
 
 st.header(':blue[Data completeness]', help='Count null values in each column')
 
-labels = hp_df.columns.tolist()
-
 total_null_values = hp_df.isnull().sum()
 total_values = hp_df.isnull().sum() + hp_df.notnull().sum()
-#hp_df.count().sort_values(ascending=True)
 not_null_values = hp_df.notnull().sum()
 null_values_percentage = (total_null_values/total_values)*100
 
-missing_values = pd.concat({'Null': total_null_values, 'Not_null': not_null_values}, axis=1)#, 'Percentage_missing': null_values_percentage}, axis=1)
-missing_values = missing_values.transpose()
-missing_values.reset_index()
-miss = pd.concat({'Null': total_null_values, 'Not_null': not_null_values, 'Percentage_missing': null_values_percentage}, axis=1)
-
-#st.dataframe(dataframe_explorer(miss,case=False))
-
-miss_noindex = miss.reset_index()
+missing = pd.concat({'Null': total_null_values, 'Not_null': not_null_values, 
+                     'Percentage_missing': null_values_percentage}, axis=1)
+miss_noindex = missing.reset_index()
 
 chart = alt.Chart(miss_noindex).mark_bar().encode(
     x=alt.X(miss_noindex.columns[3], type='quantitative', title='Percentage missing (%)'),
@@ -53,21 +45,19 @@ for y in hp_df.columns:
     if y not in NA_allowed_columns:
         actual_NA_cols.append(y)
 
-
-cols1= []
-nulls1 = []
-null_percent = []
+cols= []
+nulls = []
 for z in hp_df.columns:
-    cols1.append(z)
+    cols.append(z)
     if z in actual_NA_cols:
         x = hp_df[z].isnull().sum()
     else:
         x = int('0')
-    nulls1.append(x)
-    null_df1 = pd.DataFrame({'C':cols1,'N':nulls1})
+    nulls.append(x)
+    null_df1 = pd.DataFrame({'Column':cols,'Nulls':nulls})
     
-null_df1['P'] = (null_df1['N']/len(hp_df))*100
-null_df = null_df1.drop(null_df1[null_df1['N'] == 0].index)
+null_df1['Null Percentage'] = (null_df1['Nulls']/len(hp_df))*100
+null_df = null_df1.drop(null_df1[null_df1['Nulls'] == 0].index)
 
 chart = alt.Chart(null_df).mark_bar().encode(
     x=alt.X(null_df.columns[2], type='quantitative', title='Percentage missing (%)'),
@@ -75,7 +65,7 @@ chart = alt.Chart(null_df).mark_bar().encode(
 text = alt.Chart(null_df).mark_text(dx=15,dy=3,color='white').encode(
     x=alt.X(null_df.columns[2], type='quantitative'),
     y=alt.Y(null_df.columns[0], type='nominal'),
-    text=alt.Text('P', format='.1f'))
+    text=alt.Text('Null Percentage', format='.1f'))
 st.altair_chart(chart+text, use_container_width=True)
 
 
@@ -107,7 +97,6 @@ with col2:
     rcont.text(rows_with_null)
 
 
-################################################################################
 ### OUTLIERS
 
 st.divider()
@@ -125,9 +114,10 @@ num_cols = ['Id','MSSubClass','LotFrontage','LotArea','OverallQual',
 
 tablist = st.tabs(num_cols)
 
-for i in range(len(tablist)):  # Use index for clarity
+for i in range(len(tablist)):
     with tablist[i]:
-        fig = px.box(hp_df, x=num_cols[i], orientation='h',hover_data=['Id'], points='all', color_discrete_sequence=px.colors.qualitative.Pastel1)
+        fig = px.box(hp_df, x=num_cols[i], orientation='h',hover_data=['Id'], 
+                     points='all', color_discrete_sequence=px.colors.qualitative.Pastel1)
         st.plotly_chart(fig)
 
 col_stats = stylable_container(key="cont3",
@@ -140,17 +130,16 @@ col_stats = stylable_container(key="cont3",
                                padding: calc(1em - 1px)}""")
 with col_stats:
     col_stats.subheader('Summary of column statistics')
-    col_stats.dataframe(hp_df.describe(), width = 670)#,use_container_width=True)
+    col_stats.dataframe(hp_df.describe(), width = 670)
 
-#####################################################################
+### Duplicates
+
 st.divider()
 st.header(':green[Data uniqueness]', help='Identify duplicated rows within data')
 
-# unique value count in each column
 uniques = hp_df.nunique(axis='index').rename_axis("Columns").rename("Unique values")
 st.dataframe(uniques, use_container_width=True)
 
-# count duplicated rows
 dupes = hp_df.drop(columns=['Id'], axis=0).duplicated()
 st.write(f'The dataset contains :green[{dupes.sum()}] duplicated rows.')
 
